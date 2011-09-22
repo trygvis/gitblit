@@ -308,7 +308,7 @@ public class GitBlitServer {
 			SslSocketConnector ssl = new SslSocketConnector();
 			connector = ssl;
 		}
-		connector.setAllowRenegotiate(false);
+		connector.setAllowRenegotiate(true);
 		connector.setKeystore(keystore.getAbsolutePath());
 		connector.setPassword(password);
 		connector.setPort(port);

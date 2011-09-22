@@ -2,6 +2,7 @@
 /lib
 /ext
 /build
+/deploy
 /keystore
 /*.zip
 /gitblit.properties
@@ -12,3 +13,6 @@
 /build.properties
 /war
 /*.war
+/proposals
+*.swp
+*.un~
