@@ -12,7 +12,7 @@ html, body, table, dl, dt, dd, ol, ul, li, form, a, span, tr, th, td, div, em {
 }
 
 body {
-	width: 980px;
+	width: 1000px;
 	margin: 5px;
 	background-color: #ffffff;
 	color: #000000;
@@ -20,6 +20,12 @@ body {
     margin-left: auto;    
     padding: 0px;
     background: url(background.png) repeat-x scroll 0 0 #FFFFFF;
+}
+
+hr {	
+	color: #ffffff;
+	background-color: #ffffff;
+	height: 1px; !important
 }
 
 pre, code, pre.prettyprint, pre.plainprint {

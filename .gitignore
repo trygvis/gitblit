@@ -14,5 +14,8 @@
 /war
 /*.war
 /proposals
+/*.jar
+/federation.properties
+/mailtest.properties
 *.swp
 *.un~

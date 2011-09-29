@@ -26,10 +26,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.gitblit.models.RepositoryModel;
+import com.gitblit.utils.HttpUtils;
 import com.gitblit.utils.JGitUtils;
 import com.gitblit.utils.StringUtils;
 import com.gitblit.utils.SyndicationUtils;
-import com.gitblit.wicket.WicketUtils;
 
 /**
  * SyndicationServlet generates RSS 2.0 feeds and feed links.
@@ -116,8 +116,8 @@ public class SyndicationServlet extends HttpServlet {
 			javax.servlet.http.HttpServletResponse response) throws javax.servlet.ServletException,
 			java.io.IOException {
 
-		String hostURL = WicketUtils.getHostURL(request);
-		String url = request.getRequestURI().substring(request.getServletPath().length());
+		String servletUrl = request.getContextPath() + request.getServletPath();
+		String url = request.getRequestURI().substring(servletUrl.length());
 		if (url.charAt(0) == '/' && url.length() > 1) {
 			url = url.substring(1);
 		}
@@ -139,7 +139,7 @@ public class SyndicationServlet extends HttpServlet {
 		RepositoryModel model = GitBlit.self().getRepositoryModel(repositoryName);
 		List<RevCommit> commits = JGitUtils.getRevLog(repository, objectId, 0, length);
 		try {
-			SyndicationUtils.toRSS(hostURL, getTitle(model.name, objectId), model.description,
+			SyndicationUtils.toRSS(HttpUtils.getGitblitURL(request), getTitle(model.name, objectId), model.description,
 					model.name, commits, response.getOutputStream());
 		} catch (Exception e) {
 			logger.error("An error occurred during feed generation", e);

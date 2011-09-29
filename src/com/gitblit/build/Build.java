@@ -81,6 +81,8 @@ public class Build {
 		downloadFromApache(MavenObject.JSCH, BuildType.RUNTIME);
 		downloadFromApache(MavenObject.ROME, BuildType.RUNTIME);
 		downloadFromApache(MavenObject.JDOM, BuildType.RUNTIME);
+		downloadFromApache(MavenObject.GSON, BuildType.RUNTIME);
+		downloadFromApache(MavenObject.MAIL, BuildType.RUNTIME);
 
 		downloadFromEclipse(MavenObject.JGIT, BuildType.RUNTIME);
 		downloadFromEclipse(MavenObject.JGIT_HTTP, BuildType.RUNTIME);
@@ -104,12 +106,27 @@ public class Build {
 		downloadFromApache(MavenObject.JSCH, BuildType.COMPILETIME);
 		downloadFromApache(MavenObject.ROME, BuildType.COMPILETIME);
 		downloadFromApache(MavenObject.JDOM, BuildType.COMPILETIME);
+		downloadFromApache(MavenObject.GSON, BuildType.COMPILETIME);
+		downloadFromApache(MavenObject.MAIL, BuildType.COMPILETIME);
 
 		downloadFromEclipse(MavenObject.JGIT, BuildType.COMPILETIME);
 		downloadFromEclipse(MavenObject.JGIT_HTTP, BuildType.COMPILETIME);
 
 		// needed for site publishing
 		downloadFromApache(MavenObject.COMMONSNET, BuildType.RUNTIME);
+	}
+	
+	public static void federationClient() {
+		downloadFromApache(MavenObject.JCOMMANDER, BuildType.RUNTIME);
+		downloadFromApache(MavenObject.SERVLET, BuildType.RUNTIME);
+		downloadFromApache(MavenObject.MAIL, BuildType.RUNTIME);
+		downloadFromApache(MavenObject.SLF4JAPI, BuildType.RUNTIME);
+		downloadFromApache(MavenObject.SLF4LOG4J, BuildType.RUNTIME);
+		downloadFromApache(MavenObject.LOG4J, BuildType.RUNTIME);
+		downloadFromApache(MavenObject.GSON, BuildType.RUNTIME);
+		downloadFromApache(MavenObject.JSCH, BuildType.RUNTIME);
+		
+		downloadFromEclipse(MavenObject.JGIT, BuildType.RUNTIME);
 	}
 
 	/**
@@ -367,37 +384,37 @@ public class Build {
 				"78aa1cbf0fa3b259abdc7d87f9f6788d785aac2a");
 
 		public static final MavenObject WICKET = new MavenObject("Apache Wicket",
-				"org/apache/wicket", "wicket", "1.4.17", 1960000, 1906000, 6818000,
-				"39815e37a6f56465b2d2c3d3017c4f3bf17db50a",
-				"a792ebae4123253ffd039c3be49e773f8622f94e",
-				"f2f244ca72d10081529b017e89d6276eab62c621");
+				"org/apache/wicket", "wicket", "1.4.18", 1960000, 1906000, 6818000,
+				"921a50dbbebdf034f0042f2294760e7535cb7041",
+				"b432d60b32449fdfb216ac23af8a3ed3e0a3368c",
+				"435e70f9de94975ee30c3f1b1aa1401aea9b4e70");
 
 		public static final MavenObject WICKET_EXT = new MavenObject("Apache Wicket Extensions",
-				"org/apache/wicket", "wicket-extensions", "1.4.17", 1180000, 1118000, 1458000,
-				"01111d0dbffdc425581b006a43864c22797ce72a",
-				"f194f40ea6e361bb745dfa22e2f9171eb63a9355",
-				"bd42e5ba9444a426bb2d7cacce91c6033b663b57");
+				"org/apache/wicket", "wicket-extensions", "1.4.18", 1180000, 1118000, 1458000,
+				"f568bd2ad382db935ab06fdccfdead3f10ed1f15",
+				"c00a4979d7647d3367c6e4897a2fd7d0f78a73cc",
+				"5e76ab69f6307e3ecb2638779008b3adf5cbf9aa");
 
 		public static final MavenObject WICKET_AUTH_ROLES = new MavenObject(
-				"Apache Wicket Auth Roles", "org/apache/wicket", "wicket-auth-roles", "1.4.17",
-				44000, 45000, 166000, "86d20ff32f62d3026213ff11a78555da643bc676",
-				"37e815350a2d6b97734b250a8a03d8bf3712bba7",
-				"ac3896368bfb372d178041a4ac3ee2c44f62e21c");
+				"Apache Wicket Auth Roles", "org/apache/wicket", "wicket-auth-roles", "1.4.18",
+				44000, 45000, 166000, "44cf0647e1adca377cc4258cd7fac33aa1dd11ab",
+				"2a7e9c6a9687136c2527afa2e53148cfa82696c6",
+				"6e280995097e84b72b283132b8fe6796595caa38");
 
 		public static final MavenObject WICKET_GOOGLE_CHARTS = new MavenObject(
-				"Apache Wicket Google Charts Add-On", "org/wicketstuff", "googlecharts", "1.4.17",
-				34000, 18750, 161000, "c567b98b0c5efe4147e77ef2d0d3c2d45c49dea5",
-				"3d32d958b2f7aa58388af5701ea3aafc433e573f",
-				"c37518b67ea85af485dd61fe854137eeacc50318");
+				"Apache Wicket Google Charts Add-On", "org/wicketstuff", "googlecharts", "1.4.18",
+				34000, 18750, 161000, "1f763cc8a04e62840b63787a77a479b04ad99c75",
+				"1521ed6397192c464e89787502f937bc96ece8f8",
+				"8b0398d58bce63ba7f7a9232c4ca24160c9b1a11");
 
 		public static final MavenObject JUNIT = new MavenObject("JUnit", "junit", "junit", "4.8.2",
 				237000, 0, 0, "c94f54227b08100974c36170dcb53329435fe5ad", "", "");
 
 		public static final MavenObject MARKDOWNPAPERS = new MavenObject("MarkdownPapers",
-				"org/tautua/markdownpapers", "markdownpapers-core", "1.1.0", 87000, 58000, 278000,
-				"b879b4720fa642d3c490ab559af132daaa16dbb4",
-				"d98c53939815be2777d5a56dcdc3bbc9ddb468fa",
-				"4c09d2d3073e85b973572292af00bd69681df76b");
+				"org/tautua/markdownpapers", "markdownpapers-core", "1.1.1", 87000, 58000, 278000,
+				"07046e6d8f33866398dfc3955698925df9ff7719",
+				"178b49c34dbab6301ce848b67e7957bcf9b94d6a",
+				"160d370f6cb119a1b46a00f37cc28d23fd27daed");
 
 		public static final MavenObject BOUNCYCASTLE = new MavenObject("BouncyCastle",
 				"org/bouncycastle", "bcprov-jdk16", "1.46", 1900000, 1400000, 4670000,
@@ -412,16 +429,16 @@ public class Build {
 				"3b7c5f3938f202311bdca0bf7ed46bc0118af081");
 
 		public static final MavenObject JGIT = new MavenObject("JGit", "org/eclipse/jgit",
-				"org.eclipse.jgit", "1.0.0.201106090707-r", 1318000, 1354000, 2993000,
-				"34e70691382d67ee5c84ef207fb8d3784594ba2c",
-				"78dbd385cf40cb266f4fb2de8651b288a72f4e2d",
-				"dab55685bb6eee8d07cc87faf0cedaa3f9d04a0d");
+				"org.eclipse.jgit", "1.1.0.201109151100-r", 1318000, 1354000, 3300000,
+				"bacc988346c839f79513d7bc7f5c88b22ea6e7a5",
+				"90abf988d98ce0d4b162f94f63fc99c435eba6b4",
+				"a46540a2857a0fdbf43debf3383295a897946c79");
 
 		public static final MavenObject JGIT_HTTP = new MavenObject("JGit", "org/eclipse/jgit",
-				"org.eclipse.jgit.http.server", "1.0.0.201106090707-r", 68000, 62000, 99000,
-				"35e22f7000af95d0c90caaf2012071ef3734ff59",
-				"4a2368beb1e9db4a6a0d609b7b869f218bf8e7a9",
-				"3100ce7c40d6968481a12377c59c708cda2d17b5");
+				"org.eclipse.jgit.http.server", "1.1.0.201109151100-r", 68000, 62000, 110000,
+				"3070161a89756aac2dfc2e26d89faf31fe894ab4",
+				"9cecb8e4351e616688cafbcca906f542d9b1f525",
+				"20aaab759acd8eb6cb6acbb1b2934a689fb3774d");
 
 		public static final MavenObject JSCH = new MavenObject("JSch", "com/jcraft", "jsch",
 				"0.1.44-1", 214000, 211000, 413000, "2e9ae08de5a71bd0e0d3ba2558598181bfa71d4e",
@@ -441,6 +458,16 @@ public class Build {
 				153000, 235000, 445000, "1d04c0f321ea337f3661cf7ede8f4c6f653a8fdd",
 				"a7ed425c4c46605b8f2bf2ee118c1609682f4f2c",
 				"f3df91edccba2f07a0fced70887c2f7b7836cb75");
+
+		public static final MavenObject GSON = new MavenObject("gson", "com/google/code/gson",
+				"gson", "1.7.1", 174000, 142000, 247000,
+				"0697e3a1fa094a983cd12f7f6f61abf9c6ea52e2",
+				"51f6f78aec2d30d0c2bfb4a5f00d456a6f7a5e7e",
+				"f0872fe17d484815328538b89909d5e46d85db74");
+
+		public static final MavenObject MAIL = new MavenObject("javax.mail", "javax/mail", "mail",
+				"1.4.3", 462000, 642000, 0, "8154bf8d666e6db154c548dc31a8d512c273f5ee",
+				"5875e2729de83a4e46391f8f979ec8bd03810c10", null);
 
 		public final String name;
 		public final String group;

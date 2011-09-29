@@ -37,6 +37,7 @@ import org.apache.wicket.model.util.CollectionModel;
 import org.apache.wicket.model.util.ListModel;
 
 import com.gitblit.Constants.AccessRestrictionType;
+import com.gitblit.Constants.FederationStrategy;
 import com.gitblit.GitBlit;
 import com.gitblit.GitBlitException;
 import com.gitblit.Keys;
@@ -72,6 +73,7 @@ public class EditRepositoryPage extends BasePage {
 		// ensure this user can create or edit this repository
 		checkPermissions(repositoryModel);
 
+		List<String> federationSets = new ArrayList<String>();
 		List<String> repositoryUsers = new ArrayList<String>();
 		if (isCreate) {
 			super.setupPage("", getString("gb.newRepository"));
@@ -81,12 +83,21 @@ public class EditRepositoryPage extends BasePage {
 				repositoryUsers.addAll(GitBlit.self().getRepositoryUsers(repositoryModel));
 				Collections.sort(repositoryUsers);
 			}
+			federationSets.addAll(repositoryModel.federationSets);
 		}
 
 		final String oldName = repositoryModel.name;
+		// users palette
 		final Palette<String> usersPalette = new Palette<String>("users", new ListModel<String>(
 				repositoryUsers), new CollectionModel<String>(GitBlit.self().getAllUsernames()),
 				new ChoiceRenderer<String>("", ""), 10, false);
+
+		// federation sets palette
+		List<String> sets = GitBlit.getStrings(Keys.federation.sets);
+		final Palette<String> federationSetsPalette = new Palette<String>("federationSets",
+				new ListModel<String>(federationSets), new CollectionModel<String>(sets),
+				new ChoiceRenderer<String>("", ""), 10, false);
+
 		CompoundPropertyModel<RepositoryModel> model = new CompoundPropertyModel<RepositoryModel>(
 				repositoryModel);
 		Form<RepositoryModel> form = new Form<RepositoryModel>("editForm", model) {
@@ -122,25 +133,26 @@ public class EditRepositoryPage extends BasePage {
 					}
 
 					// confirm valid characters in repository name
-					char[] validChars = { '/', '.', '_', '-' };
-					for (char c : repositoryModel.name.toCharArray()) {
-						if (!Character.isLetterOrDigit(c)) {
-							boolean ok = false;
-							for (char vc : validChars) {
-								ok |= c == vc;
-							}
-							if (!ok) {
-								error(MessageFormat.format(
-										"Illegal character ''{0}'' in repository name!", c));
-								return;
-							}
-						}
+					Character c = StringUtils.findInvalidCharacter(repositoryModel.name);
+					if (c != null) {
+						error(MessageFormat.format("Illegal character ''{0}'' in repository name!",
+								c));
+						return;
 					}
 
 					// confirm access restriction selection
 					if (repositoryModel.accessRestriction == null) {
 						error("Please select access restriction!");
 						return;
+					}
+
+					// save federation set preferences
+					if (repositoryModel.federationStrategy.exceeds(FederationStrategy.EXCLUDE)) {
+						repositoryModel.federationSets.clear();
+						Iterator<String> sets = federationSetsPalette.getSelectedChoices();
+						while (sets.hasNext()) {
+							repositoryModel.federationSets.add(sets.next());
+						}
 					}
 
 					// save the repository
@@ -177,11 +189,24 @@ public class EditRepositoryPage extends BasePage {
 		form.add(new DropDownChoice<AccessRestrictionType>("accessRestriction", Arrays
 				.asList(AccessRestrictionType.values()), new AccessRestrictionRenderer()));
 		form.add(new CheckBox("isFrozen"));
+		// TODO enable origin definition
+		form.add(new TextField<String>("origin").setEnabled(false/* isCreate */));
+
+		// federation strategies - remove ORIGIN choice if this repository has
+		// no origin.
+		List<FederationStrategy> federationStrategies = new ArrayList<FederationStrategy>(
+				Arrays.asList(FederationStrategy.values()));
+		if (StringUtils.isEmpty(repositoryModel.origin)) {
+			federationStrategies.remove(FederationStrategy.FEDERATE_ORIGIN);
+		}
+		form.add(new DropDownChoice<FederationStrategy>("federationStrategy", federationStrategies,
+				new FederationTypeRenderer()));
 		form.add(new CheckBox("useTickets"));
 		form.add(new CheckBox("useDocs"));
 		form.add(new CheckBox("showRemoteBranches"));
 		form.add(new CheckBox("showReadme"));
 		form.add(usersPalette);
+		form.add(federationSetsPalette);
 
 		form.add(new Button("save"));
 		Button cancel = new Button("cancel") {
@@ -261,6 +286,27 @@ public class EditRepositoryPage extends BasePage {
 
 		@Override
 		public String getIdValue(AccessRestrictionType type, int index) {
+			return Integer.toString(index);
+		}
+	}
+
+	private class FederationTypeRenderer implements IChoiceRenderer<FederationStrategy> {
+
+		private static final long serialVersionUID = 1L;
+
+		private final Map<FederationStrategy, String> map;
+
+		public FederationTypeRenderer() {
+			map = getFederationTypes();
+		}
+
+		@Override
+		public String getDisplayValue(FederationStrategy type) {
+			return map.get(type);
+		}
+
+		@Override
+		public String getIdValue(FederationStrategy type, int index) {
 			return Integer.toString(index);
 		}
 	}

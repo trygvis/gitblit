@@ -37,6 +37,8 @@ import java.util.zip.ZipOutputStream;
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.FetchCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ResetCommand;
+import org.eclipse.jgit.api.ResetCommand.ResetType;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffEntry.ChangeType;
 import org.eclipse.jgit.diff.DiffFormatter;
@@ -62,6 +64,7 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.filter.RevFilter;
 import org.eclipse.jgit.storage.file.FileRepository;
+import org.eclipse.jgit.transport.CredentialsProvider;
 import org.eclipse.jgit.transport.FetchResult;
 import org.eclipse.jgit.transport.RefSpec;
 import org.eclipse.jgit.treewalk.TreeWalk;
@@ -134,6 +137,15 @@ public class JGitUtils {
 	}
 
 	/**
+	 * Encapsulates the result of cloning or pulling from a repository.
+	 */
+	public static class CloneResult {
+		public String name;
+		public FetchResult fetchResult;
+		public boolean createdRepository;
+	}
+
+	/**
 	 * Clone or Fetch a repository. If the local repository does not exist,
 	 * clone is called. If the repository does exist, fetch is called. By
 	 * default the clone/fetch retrieves the remote heads, tags, and notes.
@@ -141,33 +153,65 @@ public class JGitUtils {
 	 * @param repositoriesFolder
 	 * @param name
 	 * @param fromUrl
-	 * @return FetchResult
+	 * @return CloneResult
 	 * @throws Exception
 	 */
-	public static FetchResult cloneRepository(File repositoriesFolder, String name, String fromUrl)
+	public static CloneResult cloneRepository(File repositoriesFolder, String name, String fromUrl)
 			throws Exception {
-		FetchResult result = null;
-		if (!name.toLowerCase().endsWith(Constants.DOT_GIT_EXT)) {
-			name += Constants.DOT_GIT_EXT;
+		return cloneRepository(repositoriesFolder, name, fromUrl, true, null);
+	}
+
+	/**
+	 * Clone or Fetch a repository. If the local repository does not exist,
+	 * clone is called. If the repository does exist, fetch is called. By
+	 * default the clone/fetch retrieves the remote heads, tags, and notes.
+	 * 
+	 * @param repositoriesFolder
+	 * @param name
+	 * @param fromUrl
+	 * @param bare
+	 * @param credentialsProvider
+	 * @return CloneResult
+	 * @throws Exception
+	 */
+	public static CloneResult cloneRepository(File repositoriesFolder, String name, String fromUrl,
+			boolean bare, CredentialsProvider credentialsProvider) throws Exception {
+		CloneResult result = new CloneResult();
+		if (bare) {
+			// bare repository, ensure .git suffix
+			if (!name.toLowerCase().endsWith(Constants.DOT_GIT_EXT)) {
+				name += Constants.DOT_GIT_EXT;
+			}
+		} else {
+			// normal repository, strip .git suffix
+			if (name.toLowerCase().endsWith(Constants.DOT_GIT_EXT)) {
+				name = name.substring(0, name.indexOf(Constants.DOT_GIT_EXT));
+			}
 		}
+		result.name = name;
+
 		File folder = new File(repositoriesFolder, name);
 		if (folder.exists()) {
 			File gitDir = FileKey.resolve(new File(repositoriesFolder, name), FS.DETECTED);
 			FileRepository repository = new FileRepository(gitDir);
-			result = fetchRepository(repository);
+			result.fetchResult = fetchRepository(credentialsProvider, repository);
 			repository.close();
 		} else {
 			CloneCommand clone = new CloneCommand();
-			clone.setBare(true);
+			clone.setBare(bare);
 			clone.setCloneAllBranches(true);
 			clone.setURI(fromUrl);
 			clone.setDirectory(folder);
+			if (credentialsProvider != null) {
+				clone.setCredentialsProvider(credentialsProvider);
+			}
 			clone.call();
 			// Now we have to fetch because CloneCommand doesn't fetch
 			// refs/notes nor does it allow manual RefSpec.
 			File gitDir = FileKey.resolve(new File(repositoriesFolder, name), FS.DETECTED);
 			FileRepository repository = new FileRepository(gitDir);
-			result = fetchRepository(repository);
+			result.createdRepository = true;
+			result.fetchResult = fetchRepository(credentialsProvider, repository);
 			repository.close();
 		}
 		return result;
@@ -177,13 +221,14 @@ public class JGitUtils {
 	 * Fetch updates from the remote repository. If refSpecs is unspecifed,
 	 * remote heads, tags, and notes are retrieved.
 	 * 
+	 * @param credentialsProvider
 	 * @param repository
 	 * @param refSpecs
 	 * @return FetchResult
 	 * @throws Exception
 	 */
-	public static FetchResult fetchRepository(Repository repository, RefSpec... refSpecs)
-			throws Exception {
+	public static FetchResult fetchRepository(CredentialsProvider credentialsProvider,
+			Repository repository, RefSpec... refSpecs) throws Exception {
 		Git git = new Git(repository);
 		FetchCommand fetch = git.fetch();
 		List<RefSpec> specs = new ArrayList<RefSpec>();
@@ -194,8 +239,32 @@ public class JGitUtils {
 		} else {
 			specs.addAll(Arrays.asList(refSpecs));
 		}
+		if (credentialsProvider != null) {
+			fetch.setCredentialsProvider(credentialsProvider);
+		}
 		fetch.setRefSpecs(specs);
-		FetchResult result = fetch.call();
+		FetchResult fetchRes = fetch.call();
+		return fetchRes;
+	}
+
+	/**
+	 * Reset HEAD to the latest remote tracking commit.
+	 * 
+	 * @param repository
+	 * @param remoteRef
+	 *            the remote tracking reference (e.g. origin/master)
+	 * @return Ref
+	 * @throws Exception
+	 */
+	public static Ref resetHEAD(Repository repository, String remoteRef) throws Exception {
+		if (!remoteRef.startsWith(Constants.R_REMOTES)) {
+			remoteRef = Constants.R_REMOTES + remoteRef;
+		}
+		Git git = new Git(repository);
+		ResetCommand reset = git.reset();
+		reset.setMode(ResetType.SOFT);
+		reset.setRef(remoteRef);
+		Ref result = reset.call();
 		return result;
 	}
 

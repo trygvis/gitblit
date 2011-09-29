@@ -16,17 +16,25 @@
 package com.gitblit;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.mail.Message;
+import javax.mail.MessagingException;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.http.Cookie;
@@ -46,10 +54,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.gitblit.Constants.AccessRestrictionType;
+import com.gitblit.Constants.FederationRequest;
+import com.gitblit.Constants.FederationStrategy;
+import com.gitblit.Constants.FederationToken;
+import com.gitblit.models.FederationModel;
+import com.gitblit.models.FederationProposal;
 import com.gitblit.models.RepositoryModel;
 import com.gitblit.models.UserModel;
+import com.gitblit.utils.FederationUtils;
 import com.gitblit.utils.JGitUtils;
 import com.gitblit.utils.StringUtils;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 /**
  * GitBlit is the servlet context listener singleton that acts as the core for
@@ -73,6 +89,13 @@ public class GitBlit implements ServletContextListener {
 
 	private final Logger logger = LoggerFactory.getLogger(GitBlit.class);
 
+	private final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(5);
+
+	private final List<FederationModel> federationRegistrations = Collections
+			.synchronizedList(new ArrayList<FederationModel>());
+
+	private final Map<String, FederationModel> federationPullResults = new ConcurrentHashMap<String, FederationModel>();
+
 	private RepositoryResolver<Void> repositoryResolver;
 
 	private File repositoriesFolder;
@@ -82,6 +105,8 @@ public class GitBlit implements ServletContextListener {
 	private IUserService userService;
 
 	private IStoredSettings settings;
+
+	private MailExecutor mailExecutor;
 
 	public GitBlit() {
 		if (gitblit == null) {
@@ -100,6 +125,15 @@ public class GitBlit implements ServletContextListener {
 			new GitBlit();
 		}
 		return gitblit;
+	}
+
+	/**
+	 * Determine if this is the GO variant of Gitblit.
+	 * 
+	 * @return true if this is the GO variant of Gitblit.
+	 */
+	public static boolean isGO() {
+		return self().settings instanceof FileSettings;
 	}
 
 	/**
@@ -226,6 +260,30 @@ public class GitBlit implements ServletContextListener {
 	 * @return a user object or null
 	 */
 	public UserModel authenticate(String username, char[] password) {
+		if (StringUtils.isEmpty(username)) {
+			// can not authenticate empty username
+			return null;
+		}
+		String pw = new String(password);
+		if (StringUtils.isEmpty(pw)) {
+			// can not authenticate empty password
+			return null;
+		}
+
+		// check to see if this is the federation user
+		if (canFederate()) {
+			if (username.equalsIgnoreCase(Constants.FEDERATION_USER)) {
+				List<String> tokens = getFederationTokens();
+				if (tokens.contains(pw)) {
+					// the federation user is an administrator
+					UserModel federationUser = new UserModel(Constants.FEDERATION_USER);
+					federationUser.canAdmin = true;
+					return federationUser;
+				}
+			}
+		}
+
+		// delegate authentication to the user service
 		if (userService == null) {
 			return null;
 		}
@@ -463,6 +521,12 @@ public class GitBlit implements ServletContextListener {
 			model.showRemoteBranches = getConfig(config, "showRemoteBranches", false);
 			model.isFrozen = getConfig(config, "isFrozen", false);
 			model.showReadme = getConfig(config, "showReadme", false);
+			model.federationStrategy = FederationStrategy.fromName(getConfig(config,
+					"federationStrategy", null));
+			model.federationSets = new ArrayList<String>(Arrays.asList(config.getStringList(
+					"gitblit", null, "federationSets")));
+			model.isFederated = getConfig(config, "isFederated", false);
+			model.origin = config.getString("remote", "origin", "url");
 		}
 		r.close();
 		return model;
@@ -614,22 +678,37 @@ public class GitBlit implements ServletContextListener {
 
 		// update settings
 		if (r != null) {
-			StoredConfig config = JGitUtils.readConfig(r);
-			config.setString("gitblit", null, "description", repository.description);
-			config.setString("gitblit", null, "owner", repository.owner);
-			config.setBoolean("gitblit", null, "useTickets", repository.useTickets);
-			config.setBoolean("gitblit", null, "useDocs", repository.useDocs);
-			config.setString("gitblit", null, "accessRestriction",
-					repository.accessRestriction.name());
-			config.setBoolean("gitblit", null, "showRemoteBranches", repository.showRemoteBranches);
-			config.setBoolean("gitblit", null, "isFrozen", repository.isFrozen);
-			config.setBoolean("gitblit", null, "showReadme", repository.showReadme);
-			try {
-				config.save();
-			} catch (IOException e) {
-				logger.error("Failed to save repository config!", e);
-			}
+			updateConfiguration(r, repository);
 			r.close();
+		}
+	}
+
+	/**
+	 * Updates the Gitblit configuration for the specified repository.
+	 * 
+	 * @param r
+	 *            the Git repository
+	 * @param repository
+	 *            the Gitblit repository model
+	 */
+	public void updateConfiguration(Repository r, RepositoryModel repository) {
+		StoredConfig config = JGitUtils.readConfig(r);
+		config.setString("gitblit", null, "description", repository.description);
+		config.setString("gitblit", null, "owner", repository.owner);
+		config.setBoolean("gitblit", null, "useTickets", repository.useTickets);
+		config.setBoolean("gitblit", null, "useDocs", repository.useDocs);
+		config.setString("gitblit", null, "accessRestriction", repository.accessRestriction.name());
+		config.setBoolean("gitblit", null, "showRemoteBranches", repository.showRemoteBranches);
+		config.setBoolean("gitblit", null, "isFrozen", repository.isFrozen);
+		config.setBoolean("gitblit", null, "showReadme", repository.showReadme);
+		config.setStringList("gitblit", null, "federationSets", repository.federationSets);
+		config.setString("gitblit", null, "federationStrategy",
+				repository.federationStrategy.name());
+		config.setBoolean("gitblit", null, "isFederated", repository.isFederated);
+		try {
+			config.save();
+		} catch (IOException e) {
+			logger.error("Failed to save repository config!", e);
 		}
 	}
 
@@ -711,13 +790,386 @@ public class GitBlit implements ServletContextListener {
 	}
 
 	/**
+	 * Returns Gitblit's scheduled executor service for scheduling tasks.
+	 * 
+	 * @return scheduledExecutor
+	 */
+	public ScheduledExecutorService executor() {
+		return scheduledExecutor;
+	}
+
+	public static boolean canFederate() {
+		String passphrase = getString(Keys.federation.passphrase, "");
+		return !StringUtils.isEmpty(passphrase);
+	}
+
+	/**
+	 * Configures this Gitblit instance to pull any registered federated gitblit
+	 * instances.
+	 */
+	private void configureFederation() {
+		boolean validPassphrase = true;
+		String passphrase = settings.getString(Keys.federation.passphrase, "");
+		if (StringUtils.isEmpty(passphrase)) {
+			logger.warn("Federation passphrase is blank! This server can not be PULLED from.");
+			validPassphrase = false;
+		}
+		if (validPassphrase) {
+			// standard tokens
+			for (FederationToken tokenType : FederationToken.values()) {
+				logger.info(MessageFormat.format("Federation {0} token = {1}", tokenType.name(),
+						getFederationToken(tokenType)));
+			}
+
+			// federation set tokens
+			for (String set : settings.getStrings(Keys.federation.sets)) {
+				logger.info(MessageFormat.format("Federation Set {0} token = {1}", set,
+						getFederationToken(set)));
+			}
+		}
+
+		// Schedule the federation executor
+		List<FederationModel> registrations = getFederationRegistrations();
+		if (registrations.size() > 0) {
+			FederationPullExecutor executor = new FederationPullExecutor(registrations, true);
+			scheduledExecutor.schedule(executor, 1, TimeUnit.MINUTES);
+		}
+	}
+
+	/**
+	 * Returns the list of federated gitblit instances that this instance will
+	 * try to pull.
+	 * 
+	 * @return list of registered gitblit instances
+	 */
+	public List<FederationModel> getFederationRegistrations() {
+		if (federationRegistrations.isEmpty()) {
+			federationRegistrations.addAll(FederationUtils.getFederationRegistrations(settings));
+		}
+		return federationRegistrations;
+	}
+
+	/**
+	 * Retrieve the specified federation registration.
+	 * 
+	 * @param name
+	 *            the name of the registration
+	 * @return a federation registration
+	 */
+	public FederationModel getFederationRegistration(String url, String name) {
+		// check registrations
+		for (FederationModel r : getFederationRegistrations()) {
+			if (r.name.equals(name) && r.url.equals(url)) {
+				return r;
+			}
+		}
+
+		// check the results
+		for (FederationModel r : getFederationResultRegistrations()) {
+			if (r.name.equals(name) && r.url.equals(url)) {
+				return r;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Returns the list of possible federation tokens for this Gitblit instance.
+	 * 
+	 * @return list of federation tokens
+	 */
+	public List<String> getFederationTokens() {
+		List<String> tokens = new ArrayList<String>();
+		// generate standard tokens
+		for (FederationToken type : FederationToken.values()) {
+			tokens.add(getFederationToken(type));
+		}
+		// generate tokens for federation sets
+		for (String set : settings.getStrings(Keys.federation.sets)) {
+			tokens.add(getFederationToken(set));
+		}
+		return tokens;
+	}
+
+	/**
+	 * Returns the specified federation token for this Gitblit instance.
+	 * 
+	 * @param type
+	 * @return a federation token
+	 */
+	public String getFederationToken(FederationToken type) {
+		return getFederationToken(type.name());
+	}
+
+	/**
+	 * Returns the specified federation token for this Gitblit instance.
+	 * 
+	 * @param value
+	 * @return a federation token
+	 */
+	public String getFederationToken(String value) {
+		String passphrase = settings.getString(Keys.federation.passphrase, "");
+		return StringUtils.getSHA1(passphrase + "-" + value);
+	}
+
+	/**
+	 * Compares the provided token with this Gitblit instance's tokens and
+	 * determines if the requested permission may be granted to the token.
+	 * 
+	 * @param req
+	 * @param token
+	 * @return true if the request can be executed
+	 */
+	public boolean validateFederationRequest(FederationRequest req, String token) {
+		String all = getFederationToken(FederationToken.ALL);
+		String unr = getFederationToken(FederationToken.USERS_AND_REPOSITORIES);
+		String jur = getFederationToken(FederationToken.REPOSITORIES);
+		switch (req) {
+		case PULL_REPOSITORIES:
+			return token.equals(all) || token.equals(unr) || token.equals(jur);
+		case PULL_USERS:
+			return token.equals(all) || token.equals(unr);
+		case PULL_SETTINGS:
+			return token.equals(all);
+		}
+		return false;
+	}
+
+	/**
+	 * Acknowledge and cache the status of a remote Gitblit instance.
+	 * 
+	 * @param identification
+	 *            the identification of the pulling Gitblit instance
+	 * @param registration
+	 *            the registration from the pulling Gitblit instance
+	 * @return true if acknowledged
+	 */
+	public boolean acknowledgeFederationStatus(String identification, FederationModel registration) {
+		// reset the url to the identification of the pulling Gitblit instance
+		registration.url = identification;
+		String id = identification;
+		if (!StringUtils.isEmpty(registration.folder)) {
+			id += "-" + registration.folder;
+		}
+		federationPullResults.put(id, registration);
+		return true;
+	}
+
+	/**
+	 * Returns the list of registration results.
+	 * 
+	 * @return the list of registration results
+	 */
+	public List<FederationModel> getFederationResultRegistrations() {
+		return new ArrayList<FederationModel>(federationPullResults.values());
+	}
+
+	/**
+	 * Submit a federation proposal. The proposal is cached locally and the
+	 * Gitblit administrator(s) are notified via email.
+	 * 
+	 * @param proposal
+	 *            the proposal
+	 * @param gitblitUrl
+	 *            the url of your gitblit instance to send an email to
+	 *            administrators
+	 * @return true if the proposal was submitted
+	 */
+	public boolean submitFederationProposal(FederationProposal proposal, String gitblitUrl) {
+		// convert proposal to json
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		String json = gson.toJson(proposal);
+
+		try {
+			// make the proposals folder
+			File proposalsFolder = new File(getString(Keys.federation.proposalsFolder, "proposals")
+					.trim());
+			proposalsFolder.mkdirs();
+
+			// cache json to a file
+			File file = new File(proposalsFolder, proposal.token + Constants.PROPOSAL_EXT);
+			com.gitblit.utils.FileUtils.writeContent(file, json);
+		} catch (Exception e) {
+			logger.error(MessageFormat.format("Failed to cache proposal from {0}", proposal.url), e);
+		}
+
+		// send an email, if possible
+		try {
+			Message message = mailExecutor.createMessageForAdministrators();
+			if (message != null) {
+				message.setSubject("Federation proposal from " + proposal.url);
+				message.setText("Please review the proposal @ " + gitblitUrl + "/proposal/"
+						+ proposal.token);
+				mailExecutor.queue(message);
+			}
+		} catch (Throwable t) {
+			logger.error("Failed to notify administrators of proposal", t);
+		}
+		return true;
+	}
+
+	/**
+	 * Returns the list of pending federation proposals
+	 * 
+	 * @return list of federation proposals
+	 */
+	public List<FederationProposal> getPendingFederationProposals() {
+		List<FederationProposal> list = new ArrayList<FederationProposal>();
+		File folder = new File(getString(Keys.federation.proposalsFolder, "proposals").trim());
+		if (folder.exists()) {
+			File[] files = folder.listFiles(new FileFilter() {
+				@Override
+				public boolean accept(File file) {
+					return file.isFile()
+							&& file.getName().toLowerCase().endsWith(Constants.PROPOSAL_EXT);
+				}
+			});
+			Gson gson = new Gson();
+			for (File file : files) {
+				String json = com.gitblit.utils.FileUtils.readContent(file, null);
+				FederationProposal proposal = gson.fromJson(json, FederationProposal.class);
+				list.add(proposal);
+			}
+		}
+		return list;
+	}
+
+	/**
+	 * Get repositories for the specified token.
+	 * 
+	 * @param gitblitUrl
+	 *            the base url of this gitblit instance
+	 * @param token
+	 *            the federation token
+	 * @return a map of <cloneurl, RepositoryModel>
+	 */
+	public Map<String, RepositoryModel> getRepositories(String gitblitUrl, String token) {
+		Map<String, String> federationSets = new HashMap<String, String>();
+		for (String set : getStrings(Keys.federation.sets)) {
+			federationSets.put(getFederationToken(set), set);
+		}
+
+		// Determine the Gitblit clone url
+		StringBuilder sb = new StringBuilder();
+		sb.append(gitblitUrl);
+		sb.append(Constants.GIT_PATH);
+		sb.append("{0}");
+		String cloneUrl = sb.toString();
+
+		// Retrieve all available repositories
+		UserModel user = new UserModel(Constants.FEDERATION_USER);
+		user.canAdmin = true;
+		List<RepositoryModel> list = getRepositoryModels(user);
+
+		// create the [cloneurl, repositoryModel] map
+		Map<String, RepositoryModel> repositories = new HashMap<String, RepositoryModel>();
+		for (RepositoryModel model : list) {
+			// by default, setup the url for THIS repository
+			String url = MessageFormat.format(cloneUrl, model.name);
+			switch (model.federationStrategy) {
+			case EXCLUDE:
+				// skip this repository
+				continue;
+			case FEDERATE_ORIGIN:
+				// federate the origin, if it is defined
+				if (!StringUtils.isEmpty(model.origin)) {
+					url = model.origin;
+				}
+				break;
+			}
+
+			if (federationSets.containsKey(token)) {
+				// include repositories only for federation set
+				String set = federationSets.get(token);
+				if (model.federationSets.contains(set)) {
+					repositories.put(url, model);
+				}
+			} else {
+				// standard federation token for ALL
+				repositories.put(url, model);
+			}
+		}
+		return repositories;
+	}
+
+	/**
+	 * Creates a proposal from the token.
+	 * 
+	 * @param gitblitUrl
+	 *            the url of this Gitblit instance
+	 * @param token
+	 * @return a potential proposal
+	 */
+	public FederationProposal createFederationProposal(String gitblitUrl, String token) {
+		FederationToken tokenType = FederationToken.REPOSITORIES;
+		for (FederationToken type : FederationToken.values()) {
+			if (token.equals(getFederationToken(type))) {
+				tokenType = type;
+				break;
+			}
+		}
+		Map<String, RepositoryModel> repositories = getRepositories(gitblitUrl, token);
+		FederationProposal proposal = new FederationProposal(gitblitUrl, tokenType, token,
+				repositories);
+		return proposal;
+	}
+
+	/**
+	 * Returns the proposal identified by the supplied token.
+	 * 
+	 * @param token
+	 * @return the specified proposal or null
+	 */
+	public FederationProposal getPendingFederationProposal(String token) {
+		List<FederationProposal> list = getPendingFederationProposals();
+		for (FederationProposal proposal : list) {
+			if (proposal.token.equals(token)) {
+				return proposal;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Deletes a pending federation proposal.
+	 * 
+	 * @param a
+	 *            proposal
+	 * @return true if the proposal was deleted
+	 */
+	public boolean deletePendingFederationProposal(FederationProposal proposal) {
+		File folder = new File(getString(Keys.federation.proposalsFolder, "proposals").trim());
+		File file = new File(folder, proposal.token + Constants.PROPOSAL_EXT);
+		return file.delete();
+	}
+
+	/**
+	 * Notify the administrators by email.
+	 * 
+	 * @param subject
+	 * @param message
+	 */
+	public void notifyAdministrators(String subject, String message) {
+		try {
+			Message mail = mailExecutor.createMessageForAdministrators();
+			if (mail != null) {
+				mail.setSubject(subject);
+				mail.setText(message);
+				mailExecutor.queue(mail);
+			}
+		} catch (MessagingException e) {
+			logger.error("Messaging error", e);
+		}
+	}
+
+	/**
 	 * Configure the Gitblit singleton with the specified settings source. This
 	 * source may be file settings (Gitblit GO) or may be web.xml settings
 	 * (Gitblit WAR).
 	 * 
 	 * @param settings
 	 */
-	public void configureContext(IStoredSettings settings) {
+	public void configureContext(IStoredSettings settings, boolean startFederation) {
 		logger.info("Reading configuration from " + settings.toString());
 		this.settings = settings;
 		repositoriesFolder = new File(settings.getString(Keys.git.repositoriesFolder, "git"));
@@ -746,6 +1198,15 @@ public class GitBlit implements ServletContextListener {
 			loginService = new FileUserService(realmFile);
 		}
 		setUserService(loginService);
+		mailExecutor = new MailExecutor(settings);
+		if (mailExecutor.isReady()) {
+			scheduledExecutor.scheduleAtFixedRate(mailExecutor, 1, 2, TimeUnit.MINUTES);
+		} else {
+			logger.warn("Mail server is not properly configured.  Mail services disabled.");
+		}
+		if (startFederation) {
+			configureFederation();
+		}
 	}
 
 	/**
@@ -759,7 +1220,7 @@ public class GitBlit implements ServletContextListener {
 		if (settings == null) {
 			// Gitblit WAR is running in a servlet container
 			WebXmlSettings webxmlSettings = new WebXmlSettings(contextEvent.getServletContext());
-			configureContext(webxmlSettings);
+			configureContext(webxmlSettings, true);
 		}
 	}
 
@@ -770,5 +1231,6 @@ public class GitBlit implements ServletContextListener {
 	@Override
 	public void contextDestroyed(ServletContextEvent contextEvent) {
 		logger.info("Gitblit context destroyed by servlet container.");
+		scheduledExecutor.shutdownNow();
 	}
 }

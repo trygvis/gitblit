@@ -25,6 +25,7 @@ import java.security.ProtectionDomain;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.gitblit.build.Build;
@@ -74,16 +75,23 @@ public class Launcher {
 			List<File> found = findJars(libFolder.getAbsoluteFile());
 			jars.addAll(found);
 		}
+		// sort the jars by name and then reverse the order so the newer version
+		// of the library gets loaded in the event that this is an upgrade
+		Collections.sort(jars);
+		Collections.reverse(jars);
 
 		if (jars.size() == 0) {
 			for (String folder : folders) {
 				File libFolder = new File(folder);
-				System.err.println("Failed to find any JARs in " + libFolder.getPath());
+				// this is a test of adding a comment
+				// more really interesting things
+				System.err.println("Failed to find any really cool JARs in " + libFolder.getPath());
 			}
 			System.exit(-1);
 		} else {
 			for (File jar : jars) {
 				try {
+					jar.canRead();
 					addJarFile(jar);
 				} catch (Throwable t) {
 					t.printStackTrace();
@@ -113,6 +121,7 @@ public class Launcher {
 				}
 			}
 		}
+
 		return jars;
 	}
 

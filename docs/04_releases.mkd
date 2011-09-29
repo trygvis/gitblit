@@ -1,7 +1,28 @@
 ## Release History
 
 ### Current Release
-**%VERSION%** ([go](http://code.google.com/p/gitblit/downloads/detail?name=%GO%)|[war](http://code.google.com/p/gitblit/downloads/detail?name=%WAR%)) based on [%JGIT%][jgit] &nbsp; *released %BUILDDATE%*
+**%VERSION%** ([go](http://code.google.com/p/gitblit/downloads/detail?name=%GO%)|[war](http://code.google.com/p/gitblit/downloads/detail?name=%WAR%)|[fedclient](http://code.google.com/p/gitblit/downloads/detail?name=%FEDCLIENT%)) based on [%JGIT%][jgit] &nbsp; *released %BUILDDATE%*
+
+- added: federation feature to allow gitblit instances (or gitblit federation clients) to pull repositories and, optionally, settings and accounts from other gitblit instances.  This is something like [svn-sync](http://svnbook.red-bean.com/en/1.5/svn.ref.svnsync.html) for gitblit.
+<br/>**New:** *federation.name =*
+<br/>**New:** *federation.passphrase =*
+<br/>**New:** *federation.allowProposals = false*
+<br/>**New:** *federation.proposalsFolder = proposals*
+<br/>**New:** *federation.defaultFrequency = 60 mins*
+<br/>**New:** *federation.sets =*
+<br/>**New:** *mail.* settings for sending emails
+<br/>**New:** user role *#notfederated* to prevent a user account from being pulled by a federated Gitblit instance
+- added: google-gson dependency
+- added: javamail dependency
+- updated: MarkdownPapers 1.1.1
+- updated: Wicket 1.4.18
+- updated: JGit 1.1.0
+- fixed: syndication urls for WAR deployments
+- fixed: authentication for zip downloads
+
+### Older Releases
+
+**0.5.2** ([go](http://code.google.com/p/gitblit/downloads/detail?name=gitblit-0.5.2.zip)|[war](http://code.google.com/p/gitblit/downloads/detail?name=gitblit-0.5.2.war)) based on [JGit 1.0.0 (201106090707-r)][jgit] &nbsp; *released 2011-07-27*
 
 - fixed: active repositories with a HEAD that pointed to an empty branch caused internal errors (issue 14)
 - fixed: bare-cloned repositories were listed as (empty) and were not clickable (issue 13)
@@ -15,14 +36,13 @@
 - updated: MarkdownPapers 1.1.0
 - updated: Jetty 7.4.3
 
-### Older Releases
-**0.5.1** ([go](http://code.google.com/p/gitblit/downloads/detail?name=gitblit-0.5.1.zip)|[war](http://code.google.com/p/gitblit/downloads/detail?name=gitblit-0.5.1.war)) based on [JGit 1.0.0 (201106090707-r)][jgit] &nbsp; *released 2006-06-28*
+**0.5.1** ([go](http://code.google.com/p/gitblit/downloads/detail?name=gitblit-0.5.1.zip)|[war](http://code.google.com/p/gitblit/downloads/detail?name=gitblit-0.5.1.war)) based on [JGit 1.0.0 (201106090707-r)][jgit] &nbsp; *released 2011-06-28*
 
 - clarified SSL certificate generation and configuration for both server-side and client-side
 - added some more troubleshooting information to documentation
 - replaced JavaService with Apache Commons Daemon
 
-**0.5.0** ([go](http://code.google.com/p/gitblit/downloads/detail?name=gitblit-0.5.0.zip)|[war](http://code.google.com/p/gitblit/downloads/detail?name=gitblit-0.5.0.war)) based on [JGit 1.0.0 (201106090707-r)][jgit] &nbsp; *released 2006-06-26*
+**0.5.0** ([go](http://code.google.com/p/gitblit/downloads/detail?name=gitblit-0.5.0.zip)|[war](http://code.google.com/p/gitblit/downloads/detail?name=gitblit-0.5.0.war)) based on [JGit 1.0.0 (201106090707-r)][jgit] &nbsp; *released 2011-06-26*
 
 - initial release
 
