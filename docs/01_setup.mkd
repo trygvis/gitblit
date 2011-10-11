@@ -2,20 +2,20 @@
 
 1. Download [Gitblit WAR %VERSION%](http://code.google.com/p/gitblit/downloads/detail?name=%WAR%) to the webapps folder of your servlet container.<br/>
 2. You may have to manually extract the WAR (zip file) to a folder within your webapps folder.
-3. Copy the `WEB-INF/users.properties` file to a location outside the webapps folder that is accessible by your servlet container.  
+3. Copy the `WEB-INF/users.properties` file to a location outside the webapps folder that is accessible by your servlet container.
 4. The Gitblit webapp is configured through its `web.xml` file.<br/>
 Open `web.xml` in your favorite text editor and make sure to review and set:
     - &lt;context-parameter&gt; *git.repositoryFolder* (set the full path to your repositories folder)
     - &lt;context-parameter&gt; *realm.userService* (set the full path to `users.properties`)
-5. You may have to restart your servlet container. 
+5. You may have to restart your servlet container.
 6. Open your browser to <http://localhost/gitblit> or whatever the url should be.
 7. Click the *Login* link and enter the default administrator credentials: **admin / admin**<br/>
-    **NOTE:** Make sure to change the administrator username and/or password!! 
+    **NOTE:** Make sure to change the administrator username and/or password!!
 
 ## Gitblit GO Setup
 
 1. Download and unzip [Gitblit GO %VERSION%](http://code.google.com/p/gitblit/downloads/detail?name=%GO%).<br/>
-*Its best to eliminate spaces in the path name.* 
+*Its best to eliminate spaces in the path name.*
 2. The server itself is configured through a simple text file.<br/>
 Open `gitblit.properties` in your favorite text editor and make sure to review and set:
     - *git.repositoryFolder* (path may be relative or absolute)
@@ -27,7 +27,7 @@ Open `gitblit.properties` in your favorite text editor and make sure to review a
 4. Wait a minute or two while all dependencies are downloaded and your self-signed *localhost* certificate is generated.<br/>Please see the section titled **Creating your own Self-Signed Certificate** to generate a certificate for *your hostname*.
 5. Open your browser to <http://localhost:8080> or <https://localhost:8443> depending on your chosen configuration.
 6. Click the *Login* link and enter the default administrator credentials: **admin / admin**<br/>
-    **NOTE:** Make sure to change the administrator username and/or password!! 
+    **NOTE:** Make sure to change the administrator username and/or password!!
 
 ### Creating your own Self-Signed Certificate
 Gitblit GO automatically generates an ssl certificate for you that is bound to *localhost*.
@@ -44,7 +44,7 @@ If you want to serve your repositories to another machine over https then you wi
 1. Review the contents of `makekeystore.cmd` or `makekeystore_jdk.cmd`
 2. Set *your hostname* into the *HOSTNAME* variable.
 3. Execute the script.<br/>This will generate a new certificate and keystore for *your hostname* protected by *server.storePassword*.
- 
+
 **NOTE:**<br/>If you use `makekeystore_jdk.cmd`, the certificate password AND the keystore password must match and must be set as *server.storePassword* or specified with the *storePassword* command-line parameter!
 
 Additionally, if you want to change the value of *server.storePassword* (recommended) you will have to generate a new certificate afterwards.
@@ -61,7 +61,7 @@ After service installation you can use the `gitblitw.exe` utility to control and
 Additional service definition options and runtime capabilities of `gitblitw.exe` (prunmgr.exe) are documented [here](http://commons.apache.org/daemon/procrun.html).
 
 **NOTE:**<br/>
-If you change the name of the service from *gitblit* you must also change the name of `gitblitw.exe` to match the new service name otherwise the connection between the service and the utility is lost, at least to double-click execution. 
+If you change the name of the service from *gitblit* you must also change the name of `gitblitw.exe` to match the new service name otherwise the connection between the service and the utility is lost, at least to double-click execution.
 
 #### VM Considerations
 By default, the service installation script configures your Windows service to use your default JVM.  This setup usually defaults to a client VM.<br/>
@@ -84,7 +84,7 @@ Command-Line parameters override the values in `gitblit.properties` at runtime.
     --storePassword        Password for SSL (https) keystore.
     --shutdownPort         Port for Shutdown Monitor to listen on. (port <= 0 will disable this monitor)
     --tempFolder           Folder for server to extract built-in webapp
-    
+
 **Example**
 
     java -jar gitblit.jar --userService c:\myrealm.properties --storePassword something
@@ -100,10 +100,10 @@ Any important changes to the setting keys or default values will always be menti
 1. Backup your `web.xml` file
 2. Delete currently deployed gitblit WAR
 3. Deploy new WAR and overwrite the `web.xml` file with your backup
-4. Review and optionally apply any new settings as indicated in the [release log](releases.html). 
- 
+4. Review and optionally apply any new settings as indicated in the [release log](releases.html).
+
 ### Upgrading Gitblit GO
- 
+
 1. Backup your `gitblit.properties` file
 2. Backup your `users.properties` file *(if it is located in the Gitblit GO folder)*
 3. Unzip Gitblit GO to a new folder
@@ -112,8 +112,8 @@ Any important changes to the setting keys or default values will always be menti
 6. Review and optionally apply any new settings as indicated in the [release log](releases.html).
 
 #### Upgrading Windows Service
-You may need to delete your old service definition and install a new one depending on what has changed in the release.  
-    
+You may need to delete your old service definition and install a new one depending on what has changed in the release.
+
 ## Gitblit Configuration
 
 ### Administering Repositories
@@ -132,15 +132,15 @@ All repository settings are stored within the repository `.git/config` file unde
 	    showReadme = false
 	    federationStrategy = FEDERATE_THIS
 	    isFederated = false
-	    federationSets = 
-	    
+	    federationSets =
+
 #### Repository Names
 Repository names must be unique and are CASE-SENSITIVE ON CASE-SENSITIVE FILESYSTEMS.  The name must be composed of letters, digits, or `/ _ - .`<br/>
 Whitespace is illegal.
 
 Repositories can be grouped within subfolders.  e.g. *libraries/mycoollib.git* and *libraries/myotherlib.git*
 
-All repositories created with Gitblit are *bare* and will automatically have *.git* appended to the name at creation time, if not already specified. 
+All repositories created with Gitblit are *bare* and will automatically have *.git* appended to the name at creation time, if not already specified.
 
 #### Repository Owner
 The *Repository Owner* has the special permission of being able to edit a repository through the web UI.  The Repository Owner is not permitted to rename the repository, delete the repository, or reassign ownership to another user.
@@ -161,36 +161,43 @@ User passwords are CASE-SENSITIVE and may be *plain* or *md5* formatted (see `gi
 #### User Roles
 There are two actual *roles* in Gitblit: *#admin*, which grants administrative powers to that user, and *#notfederated*, which prevents an account from being pulled by another Gitblit instance.  Administrators automatically have access to all repositories.  All other *roles* are repository names.  If a repository is access-restricted, the user must have the repository's name within his/her roles to bypass the access restriction.  This is how users are granted access to a restricted repository.
 
+## Running Gitblit Behind mod_proxy
+
+Gitblit runs just fine behind mod_proxy with the following configuration:
+
+    ProxyPass        /gitblit http://127.0.0.1:8445
+    ProxyPassReverse /gitblit http://127.0.0.1:8445
+
 ## Authentication and Authorization Customization
 Instead of maintaining a `users.properties` file, you may want to integrate Gitblit into an existing environment.
 
 You may use your own custom *com.gitblit.IUserService* implementation by specifying its fully qualified classname in the *realm.userService* setting.<br/>
 
-Your user service class must be on Gitblit's classpath and must have a public default constructor. 
+Your user service class must be on Gitblit's classpath and must have a public default constructor.
 
 %BEGINCODE%
 public interface IUserService {
 
 	/**
 	 * Setup the user service.
-	 * 
+	 *
 	 * @param settings
 	 * @since 0.6.1
 	 */
 	@Override
 	public void setup(IStoredSettings settings) {
 	}
-	
+
 	/**
 	 * Does the user service support cookie authentication?
-	 * 
+	 *
 	 * @return true or false
 	 */
 	boolean supportsCookies();
 
 	/**
 	 * Returns the cookie value for the specified user.
-	 * 
+	 *
 	 * @param model
 	 * @return cookie value
 	 */
@@ -198,7 +205,7 @@ public interface IUserService {
 
 	/**
 	 * Authenticate a user based on their cookie.
-	 * 
+	 *
 	 * @param cookie
 	 * @return a user object or null
 	 */
@@ -206,7 +213,7 @@ public interface IUserService {
 
 	/**
 	 * Authenticate a user based on a username and password.
-	 * 
+	 *
 	 * @param username
 	 * @param password
 	 * @return a user object or null
@@ -215,7 +222,7 @@ public interface IUserService {
 
 	/**
 	 * Retrieve the user object for the specified username.
-	 * 
+	 *
 	 * @param username
 	 * @return a user object or null
 	 */
@@ -223,7 +230,7 @@ public interface IUserService {
 
 	/**
 	 * Updates/writes a complete user object.
-	 * 
+	 *
 	 * @param model
 	 * @return true if update is successful
 	 */
@@ -232,7 +239,7 @@ public interface IUserService {
 	/**
 	 * Adds/updates a user object keyed by username. This method allows for
 	 * renaming a user.
-	 * 
+	 *
 	 * @param username
 	 *            the old username
 	 * @param model
@@ -243,7 +250,7 @@ public interface IUserService {
 
 	/**
 	 * Deletes the user object from the user service.
-	 * 
+	 *
 	 * @param model
 	 * @return true if successful
 	 */
@@ -251,7 +258,7 @@ public interface IUserService {
 
 	/**
 	 * Delete the user object with the specified username
-	 * 
+	 *
 	 * @param username
 	 * @return true if successful
 	 */
@@ -259,7 +266,7 @@ public interface IUserService {
 
 	/**
 	 * Returns the list of all users available to the login service.
-	 * 
+	 *
 	 * @return list of all usernames
 	 */
 	List<String> getAllUsernames();
@@ -267,7 +274,7 @@ public interface IUserService {
 	/**
 	 * Returns the list of all users who are allowed to bypass the access
 	 * restriction placed on the specified repository.
-	 * 
+	 *
 	 * @param role
 	 *            the repository name
 	 * @return list of all usernames that can bypass the access restriction
@@ -277,7 +284,7 @@ public interface IUserService {
 	/**
 	 * Sets the list of all uses who are allowed to bypass the access
 	 * restriction placed on the specified repository.
-	 * 
+	 *
 	 * @param role
 	 *            the repository name
 	 * @param usernames
@@ -287,7 +294,7 @@ public interface IUserService {
 
 	/**
 	 * Renames a repository role.
-	 * 
+	 *
 	 * @param oldRole
 	 * @param newRole
 	 * @return true if successful
@@ -296,7 +303,7 @@ public interface IUserService {
 
 	/**
 	 * Removes a repository role from all users.
-	 * 
+	 *
 	 * @param role
 	 * @return true if successful
 	 */
@@ -317,19 +324,18 @@ You must tell Git/JGit not to verify the self-signed certificate in order to per
 **NOTE:**<br/>
 The default self-signed certificate generated by Gitlbit GO is bound to *localhost*.<br/>
 If you are using Eclipse/EGit/JGit clients, you will have to generate your own certificate that specifies the exact hostname used in your clone/push url.<br/>
-You must do this because Eclipse/EGit/JGit (<= 1.1.0) always verifies certificate hostnames, regardless of the *http.sslVerify=false* client-side setting. 
- 
+You must do this because Eclipse/EGit/JGit (<= 1.1.0) always verifies certificate hostnames, regardless of the *http.sslVerify=false* client-side setting.
+
 - Eclipse/EGit/JGit
     1. Window->Preferences->Team->Git->Configuration
     2. Click the *New Entry* button
-    3. <pre>Key = *http.sslVerify*       
+    3. <pre>Key = *http.sslVerify*
        Value = *false*</pre>
 - Command-line Git ([Git-Config Manual Page](http://www.kernel.org/pub/software/scm/git/docs/git-config.html))
     <pre>git config --global --bool --add http.sslVerify false</pre>
 
-### Cloning an Access Restricted Repository 
+### Cloning an Access Restricted Repository
 - Eclipse/EGit/JGit<br/>Nothing special to configure, EGit figures out everything.
     <pre>https://yourserver/git/your/repository</pre>
 - Command-line Git<br/>*My testing indicates that your username must be embedded in the url.  YMMV.*
     <pre>https://username@yourserver/git/your/repository</pre>
-           

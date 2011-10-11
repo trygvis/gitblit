@@ -10,6 +10,8 @@
 - fixed: Null pointer exception if did not set federation strategy (issue 20)
 - fixed: Gitblit GO allows SSL renegotiation if running on Java 1.6.0_22 or later
 - added: IUserService.setup(IStoredSettings) for custom user service implementations
+- added: CrowdUserService for Atlassian Crowd-based authentication
+- added: Documentation on how to run Gitblit behind mod_proxy
 
 ### Older Releases
 
