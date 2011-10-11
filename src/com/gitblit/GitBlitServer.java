@@ -235,12 +235,12 @@ public class GitBlitServer {
 		// Set the server's contexts
 		server.setHandler(rootContext);
 
-		// Setup the GitBlit context
-		GitBlit gitblit = GitBlit.self();
-		gitblit.configureContext(settings, true);
-		rootContext.addEventListener(gitblit);
-
 		try {
+		    // Setup the GitBlit context
+		    GitBlit gitblit = GitBlit.self();
+		    gitblit.configureContext(settings, true);
+		    rootContext.addEventListener(gitblit);
+
 			// start the shutdown monitor
 			if (params.shutdownPort > 0) {
 				Thread shutdownMonitor = new ShutdownMonitorThread(server, params);

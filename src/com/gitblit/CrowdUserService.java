@@ -16,6 +16,7 @@
 package com.gitblit;
 
 import com.gitblit.models.UserModel;
+import java.io.IOException;
 import java.io.File;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -23,31 +24,33 @@ import java.net.URL;
 import java.util.List;
 import java.util.Properties;
 import org.eclipse.jgit.util.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CrowdUserService implements IUserService {
-    private final IUserService wrapped;
-    private final FileSettings settings;
-    private final String url;
-    private final String crowdUsername;
-    private final String crowdPassword;
+    private final Logger logger = LoggerFactory.getLogger(CrowdUserService.class);
+    private IUserService wrapped;
+    private FileSettings settings;
+    private String url;
+    private String crowdUsername;
+    private String crowdPassword;
 
-    public CrowdUserService() {
-        // I'd wish the settings was injected, I don't want to know
-        // the name of the configuration file.
-        File settingsFile = new File("gitblit.properties");
-        settings = new FileSettings(settingsFile.getAbsolutePath());
-
+    @Override
+	public void setup(IStoredSettings settings) throws IOException {
         Properties properties = settings.read();
 
-        File usersProperties = new File(properties.getProperty("crowd.users.properties"));
+        File usersProperties = new File(settings.getString(Keys.crowd.users_properties, null));
         wrapped = new FileUserService(usersProperties);
 
-        url = properties.getProperty("crowd.url");
-        crowdUsername = properties.getProperty("crowd.username");
-        crowdPassword = properties.getProperty("crowd.password");
+        url = settings.getString(Keys.crowd.url, null);
+        crowdUsername = settings.getString(Keys.crowd.username, null);
+        crowdPassword = settings.getString(Keys.crowd.password, null);
 
-        System.out.println("crowd.url: " + url);
-        System.out.println("crowd.users.properties: " + usersProperties.getAbsolutePath());
+        if(url == null || crowdUsername == null || crowdPassword == null) {
+            throw new IOException("Missing required properties: " + Keys.crowd.url + ", " + Keys.crowd.username + ", " + Keys.crowd.password);
+        }
+
+        logger.info("Crowd URL: " + url);
     }
 
     @Override
@@ -67,7 +70,6 @@ public class CrowdUserService implements IUserService {
 
     @Override
 	public UserModel authenticate(String username, char[] password) {
-        // System.out.println("authenticate: username=" + username);
         UserModel userModel = wrapped.getUserModel(username);
         if(userModel == null) {
             System.out.println("authenticate: Could not find user in file store");
@@ -85,7 +87,7 @@ public class CrowdUserService implements IUserService {
             c.setDoOutput(true);
             OutputStream os = c.getOutputStream();
             os.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?><password><value>".getBytes("utf-8"));
-            // TODO: This is bad and defeats the purpose with the char array
+            // TODO: This is bad and defeats the purpose with using char arrays for containing passwords.
             os.write(new String(password).getBytes("utf-8"));
             os.write("</value></password>".getBytes("utf-8"));
             os.flush();
@@ -94,11 +96,10 @@ public class CrowdUserService implements IUserService {
             return responseCode == 200 ? userModel : null;
         }
         catch(Exception e) {
-            e.printStackTrace(System.out);
+            logger.info("Error while accessing crowd", e);
             return null;
         }
         finally {
-            /*
             if(c != null) {
                 try {
                     c.close();
@@ -106,9 +107,7 @@ public class CrowdUserService implements IUserService {
                 catch(Exception ignore) {
                 }
             }
-            */
         }
-//        return wrapped.authenticate(username, password);
     }
 
     @Override

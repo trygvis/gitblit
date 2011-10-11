@@ -246,7 +246,7 @@ public class GitBlit implements ServletContextListener {
 	 * 
 	 * @param userService
 	 */
-	public void setUserService(IUserService userService) {
+	public void setUserService(IUserService userService) throws IOException {
 		logger.info("Setting up user service " + userService.toString());
 		this.userService = userService;
 		this.userService.setup(settings);
@@ -1170,7 +1170,7 @@ public class GitBlit implements ServletContextListener {
 	 * 
 	 * @param settings
 	 */
-	public void configureContext(IStoredSettings settings, boolean startFederation) {
+	public void configureContext(IStoredSettings settings, boolean startFederation) throws IOException {
 		logger.info("Reading configuration from " + settings.toString());
 		this.settings = settings;
 		repositoriesFolder = new File(settings.getString(Keys.git.repositoriesFolder, "git"));
@@ -1198,7 +1198,12 @@ public class GitBlit implements ServletContextListener {
 			}
 			loginService = new FileUserService(realmFile);
 		}
-		setUserService(loginService);
+		try {
+			setUserService(loginService);
+		} catch (IOException e) {
+			logger.error("COULD NOT START USER SERVICE.");
+			throw e;
+		}
 		mailExecutor = new MailExecutor(settings);
 		if (mailExecutor.isReady()) {
 			scheduledExecutor.scheduleAtFixedRate(mailExecutor, 1, 2, TimeUnit.MINUTES);
@@ -1221,7 +1226,11 @@ public class GitBlit implements ServletContextListener {
 		if (settings == null) {
 			// Gitblit WAR is running in a servlet container
 			WebXmlSettings webxmlSettings = new WebXmlSettings(contextEvent.getServletContext());
-			configureContext(webxmlSettings, true);
+			try {
+				configureContext(webxmlSettings, true);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
 		}
 	}
 

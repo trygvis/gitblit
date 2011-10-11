@@ -16,6 +16,7 @@
 package com.gitblit;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -76,7 +77,12 @@ public class FederationClient {
 		}
 
 		// configure the Gitblit singleton for minimal, non-server operation
-		GitBlit.self().configureContext(settings, false);
+		try {
+			GitBlit.self().configureContext(settings, false);
+		} catch (IOException e) {
+			// Configure context logs
+			System.exit(1);
+		}
 		FederationPullExecutor executor = new FederationPullExecutor(registrations, params.isDaemon);
 		executor.run();
 		if (!params.isDaemon) {

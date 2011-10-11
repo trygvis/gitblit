@@ -15,6 +15,7 @@
  */
 package com.gitblit;
 
+import java.io.IOException;
 import java.util.List;
 
 import com.gitblit.models.UserModel;
@@ -36,7 +37,7 @@ public interface IUserService {
 	 * @param settings
 	 * @since 0.6.1
 	 */
-	void setup(IStoredSettings settings);
+	void setup(IStoredSettings settings) throws IOException;
 
 	/**
 	 * Does the user service support cookie authentication?
