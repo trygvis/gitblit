@@ -17,5 +17,13 @@
 /*.jar
 /federation.properties
 /mailtest.properties
+
+# Vim
 *.swp
 *.un~
+
+# IntelliJ IDEA
+.idea
+*.iml
+*.iws
+*.ipr
