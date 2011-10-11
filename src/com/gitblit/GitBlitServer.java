@@ -147,7 +147,7 @@ public class GitBlitServer {
 			Connector httpConnector = createConnector(params.useNIO, params.port);
 			String bindInterface = settings.getString(Keys.server.httpBindInterface, null);
 			if (!StringUtils.isEmpty(bindInterface)) {
-				logger.warn(MessageFormat.format("Binding connector on port {0} to {1}",
+				logger.warn(MessageFormat.format("Binding connector on port {0,number,0} to {1}",
 						params.port, bindInterface));
 				httpConnector.setHost(bindInterface);
 			}
@@ -170,7 +170,7 @@ public class GitBlitServer {
 						params.useNIO, params.securePort);
 				String bindInterface = settings.getString(Keys.server.httpsBindInterface, null);
 				if (!StringUtils.isEmpty(bindInterface)) {
-					logger.warn(MessageFormat.format("Binding ssl connector on port {0} to {1}",
+					logger.warn(MessageFormat.format("Binding ssl connector on port {0,number,0} to {1}",
 							params.securePort, bindInterface));
 					secureConnector.setHost(bindInterface);
 				}
@@ -288,6 +288,9 @@ public class GitBlitServer {
 	/**
 	 * Creates an https connector.
 	 * 
+	 * SSL renegotiation will be enabled if the JVM is 1.6.0_22 or later.
+	 * oracle.com/technetwork/java/javase/documentation/tlsreadme2-176330.html
+	 * 
 	 * @param keystore
 	 * @param password
 	 * @param useNIO
@@ -308,7 +311,24 @@ public class GitBlitServer {
 			SslSocketConnector ssl = new SslSocketConnector();
 			connector = ssl;
 		}
-		connector.setAllowRenegotiate(true);
+		// disable renegotiation unless this is a patched JVM
+		boolean allowRenegotiation = false;
+		String v = System.getProperty("java.version");
+		if (v.startsWith("1.7")) {
+			allowRenegotiation = true;
+		} else if (v.startsWith("1.6")) {
+			// 1.6.0_22 was first release with RFC-5746 implemented fix.
+			if (v.indexOf('_') > -1) {
+				String b = v.substring(v.indexOf('_') + 1);
+				if (Integer.parseInt(b) >= 22) {
+					allowRenegotiation = true;
+				}
+			}
+		}
+		if (allowRenegotiation) {
+			logger.info("   allowing SSL renegotiation on Java " + v);
+			connector.setAllowRenegotiate(allowRenegotiation);
+		}		
 		connector.setKeystore(keystore.getAbsolutePath());
 		connector.setPassword(password);
 		connector.setPort(port);
