@@ -2,7 +2,7 @@
 <project name="gitblit" default="compile" basedir=".">
 
 	<!-- Google Code upload task -->
-	<taskdef classname="net.bluecow.googlecode.ant.GoogleCodeUploadTask" 
+	<taskdef classname="net.bluecow.googlecode.ant.GoogleCodeUploadTask"
 		classpath="${basedir}/tools/ant-googlecode-0.0.3.jar" name="gcupload"/>
 
 	<!-- GenJar task -->
@@ -15,7 +15,7 @@
 	<property name="project.deploy.dir" value="${basedir}/deploy" />
 	<property name="project.war.dir" value="${basedir}/war" />
 	<property name="project.site.dir" value="${basedir}/site" />
-	<property name="project.resources.dir" value="${basedir}/resources" />	
+	<property name="project.resources.dir" value="${basedir}/resources" />
 	<available property="hasBuildProps" file="${basedir}/build.properties"/>
 
 	<!--
@@ -24,20 +24,20 @@
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-->
 	<target name="buildprops" if="hasBuildProps">
-		<!-- Load publication servers, paths, and credentials --> 
+		<!-- Load publication servers, paths, and credentials -->
 		<loadproperties>
 			<file file="${basedir}/build.properties" />
 		</loadproperties>
 	</target>
-	
-	
+
+
 	<!--
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		Scrape the version info from code and setup the build properties 
+		Scrape the version info from code and setup the build properties
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-->
 	<target name="buildinfo" depends="buildprops">
-	
+
 		<!-- extract Gitblit version number from source code -->
 		<loadfile property="gb.version" srcfile="${basedir}/src/com/gitblit/Constants.java">
 			<filterchain>
@@ -67,7 +67,7 @@
 				</tokenfilter>
 			</filterchain>
 		</loadfile>
-					
+
 		<!-- extract JGit version number from source code -->
 		<loadfile property="jgit.version" srcfile="${basedir}/src/com/gitblit/Constants.java">
 			<filterchain>
@@ -81,13 +81,13 @@
 					<trim />
 				</tokenfilter>
 			</filterchain>
-		</loadfile>	
+		</loadfile>
 		<property name="distribution.zipfile" value="gitblit-${gb.version}.zip" />
 		<property name="distribution.warfile" value="gitblit-${gb.version}.war" />
 		<property name="fedclient.zipfile" value="fedclient-${gb.version}.zip" />
 	</target>
-	
-	
+
+
 	<!--
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		Compile
@@ -109,9 +109,9 @@
 		<delete dir="${project.build.dir}" />
 		<mkdir dir="${project.build.dir}" />
 		<javac debug="true" srcdir="${basedir}/src" destdir="${project.build.dir}">
-			<include name="com/gitblit/build/Build.java" />			
+			<include name="com/gitblit/build/Build.java" />
 			<include name="com/gitblit/Constants.java" />
-			<include name="com/gitblit/utils/StringUtils.java" />			
+			<include name="com/gitblit/utils/StringUtils.java" />
 		</javac>
 		<java classpath="${project.build.dir}" classname="com.gitblit.build.Build" />
 
@@ -120,7 +120,7 @@
 			<fileset dir="${basedir}/ext">
 				<include name="*.jar" />
 			</fileset>
-			<pathelement path="${project.build.dir}" />				
+			<pathelement path="${project.build.dir}" />
 		</path>
 		<javac debug="true" destdir="${project.build.dir}" failonerror="false">
 			<src path="${basedir}/src" />
@@ -131,14 +131,14 @@
 		</copy>
 	</target>
 
-	
+
 	<!--
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		Build Gitblit GO
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-->
 	<target name="buildGO" depends="compile" description="Build Gitblit GO distribution">
-		
+
 		<echo>Building Gitblit GO ${gb.version}</echo>
 
 		<!-- Delete the deploy folder -->
@@ -174,8 +174,8 @@
 		<antcall target="buildDocs" inheritall="true" inheritrefs="true">
 			<param name="docs.output.dir" value="${project.deploy.dir}/docs" />
 		</antcall>
-		
-		<!-- Create Zip deployment -->		
+
+		<!-- Create Zip deployment -->
 		<zip destfile="${distribution.zipfile}">
 			<fileset dir="${project.deploy.dir}">
 				<include name="**/*" />
@@ -183,8 +183,8 @@
 		</zip>
 
 	</target>
-	
-	
+
+
 	<!--
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		Build Gitblit Docs which are bundled with GO and WAR downloads
@@ -282,24 +282,24 @@
 
 				<arg value="--substitute" />
 				<arg value="%ENDCODE%=&lt;/pre&gt;" />
-				
+
 				<arg value="--regex" />
 				<arg value="&quot;\b(issue)(\s*[#]?|-){0,1}(\d+)\b!!!&lt;a href='http://code.google.com/p/gitblit/issues/detail?id=$3'&gt;issue $3&lt;/a&gt;&quot;" />
-		
+
 			</java>
 	</target>
-	
-				
+
+
 	<!--
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		Build Gitblit WAR
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-->
 	<target name="buildWAR" depends="compile" description="Build Gitblit WAR">
-		
+
 		<echo>Building Gitblit WAR ${gb.version}</echo>
-		
-		<delete dir="${project.war.dir}" />		
+
+		<delete dir="${project.war.dir}" />
 
 		<!-- Copy web.xml and users.properties to WEB-INF -->
 		<copy todir="${project.war.dir}/WEB-INF">
@@ -314,22 +314,22 @@
 				<include name="NOTICE" />
 			</fileset>
 		</copy>
-		
+
 		<!-- Build the docs for the WAR build -->
 		<antcall target="buildDocs" inheritall="true" inheritrefs="true">
 			<param name="docs.output.dir" value="${project.war.dir}/WEB-INF/docs" />
 		</antcall>
-		
-		<!-- Build the WAR web.xml from the prototype web.xml and gitblit.properties --> 
+
+		<!-- Build the WAR web.xml from the prototype web.xml and gitblit.properties -->
 		<java classpath="${project.build.dir}" classname="com.gitblit.build.BuildWebXml">
 			<classpath refid="master-classpath" />
-			
+
 			<arg value="--sourceFile" />
 			<arg value="${basedir}/src/WEB-INF/web.xml" />
-					
+
 			<arg value="--destinationFile" />
 			<arg value="${project.war.dir}/WEB-INF/web.xml" />
-			
+
 			<arg value="--propertiesFile" />
 			<arg value="${basedir}/distrib/gitblit.properties" />
 		</java>
@@ -340,7 +340,7 @@
 				<exclude name="thumbs.db" />
 			</fileset>
 		</copy>
-		
+
 		<!-- Gitblit library dependencies -->
 		<mkdir dir="${project.war.dir}/WEB-INF/lib"/>
 		<copy todir="${project.war.dir}/WEB-INF/lib">
@@ -363,7 +363,7 @@
 				<exclude name="com/gitblit/build/**" />
 				<exclude name="com/gitblit/GitBlitServer*.class" />
 				<exclude name="com/gitblit/Launcher*.class" />
-				<exclude name="com/gitblit/MakeCertificate*.class" />				
+				<exclude name="com/gitblit/MakeCertificate*.class" />
 			</fileset>
 		</copy>
 
@@ -371,15 +371,15 @@
 		<jar basedir="${project.war.dir}" destfile="${distribution.warfile}" compress="true" />
 	</target>
 
-	
-	<!-- 
+
+	<!--
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		Build the stand-alone, command-line Gitblit Federation Client
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-->
 	<target name="buildFederationClient" depends="compile" description="Builds the stand-alone Gitblit federation client">
 		<echo>Building Gitblit Federation Client ${gb.version}</echo>
-	
+
 		<genjar jarfile="fedclient.jar">
 			<class name="com.gitblit.FederationClientLauncher" />
 			<resource file="${project.build.dir}/log4j.properties" />
@@ -394,30 +394,77 @@
 			<classpath refid="master-classpath" />
 			<manifest>
 				<attribute name="Main-Class" value="com.gitblit.FederationClientLauncher" />
-				<attribute name="Specification-Version" value="${gb.version}" />				
+				<attribute name="Specification-Version" value="${gb.version}" />
 				<attribute name="Release-Date" value="${gb.versionDate}" />
 			</manifest>
 		</genjar>
-		
+
 		<!-- Build the federation client zip file -->
 		<zip destfile="${fedclient.zipfile}">
 			<fileset dir="${basedir}">
-				<include name="fedclient.jar" />				
+				<include name="fedclient.jar" />
 			</fileset>
 			<fileset dir="${basedir}/distrib">
-				<include name="federation.properties" />				
+				<include name="federation.properties" />
 			</fileset>
 		</zip>
 	</target>
 
-		
-	<!-- 
+
+	<!--
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		Build the stand-alone, command-line Trust Certificate tool
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	-->
+	<target name="buildTrustCertificate" depends="compile" description="Builds the stand-alone Gitblit federation client">
+		<echo>Building Trust Certificate ${gb.version}</echo>
+
+		<genjar jarfile="TrustCertificate.jar">
+			<class name="com.gitblit.TrustCertificate" />
+			<resource file="${project.build.dir}/log4j.properties" />
+			<classfilter>
+                <!--
+				<exclude name="org.apache." />
+				<exclude name="org.bouncycastle." />
+				<exclude name="org.eclipse." />
+				<exclude name="com.beust." />
+				<exclude name="com.google." />
+                -->
+				<exclude name="com.google." />
+				<exclude name="org.apache." />
+				<exclude name="org.bouncycastle." />
+				<exclude name="org.eclipse." />
+				<exclude name="org.slf4j." />
+			</classfilter>
+			<classpath refid="master-classpath" />
+			<manifest>
+				<attribute name="Main-Class" value="com.gitblit.TrustCertificate" />
+				<attribute name="Specification-Version" value="${gb.version}" />
+				<attribute name="Release-Date" value="${gb.versionDate}" />
+			</manifest>
+		</genjar>
+
+		<!-- Build the federation client zip file -->
+        <!--
+		<zip destfile="${fedclient.zipfile}">
+			<fileset dir="${basedir}">
+				<include name="fedclient.jar" />
+			</fileset>
+			<fileset dir="${basedir}/distrib">
+				<include name="federation.properties" />
+			</fileset>
+		</zip>
+        -->
+	</target>
+
+
+	<!--
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		Build the Gitblit Website
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-->
 	<target name="buildSite" depends="compile" description="Build the Gitblit website">
-		
+
 		<echo>Building Gitblit Website ${gb.version}</echo>
 
 		<!-- Build Site -->
@@ -468,13 +515,13 @@
 		<!-- Generate thumbnails of screenshots -->
 		<java classpath="${project.build.dir}" classname="com.gitblit.build.BuildThumbnails">
 			<classpath refid="master-classpath" />
-				
+
 			<arg value="--sourceFolder" />
 			<arg value="${basedir}/docs/screenshots" />
-		
+
 			<arg value="--destinationFolder" />
 			<arg value="${project.site.dir}/thumbs" />
-			
+
 			<arg value="--maximumDimension" />
 			<arg value="250" />
 		</java>
@@ -498,13 +545,13 @@
 
 			<arg value="--pageHeader" />
 			<arg value="${basedir}/docs/site_header.html" />
-			
+
 			<arg value="--pageFooter" />
 			<arg value="${basedir}/docs/site_footer.html" />
 
 			<arg value="--analyticsSnippet" />
 			<arg value="${basedir}/docs/site_analytics.html" />
-				
+
 			<arg value="--adSnippet" />
 			<arg value="${basedir}/docs/site_ads.html" />
 
@@ -534,7 +581,7 @@
 
 			<arg value="--properties" />
 			<arg value="%PROPERTIES%=${basedir}/distrib/gitblit.properties" />
-			
+
 			<arg value="--nomarkdown" />
 			<arg value="%BEGINCODE%:%ENDCODE%" />
 
@@ -547,74 +594,74 @@
 			<arg value="--regex" />
 			<arg value="&quot;\b(issue)(\s*[#]?|-){0,1}(\d+)\b!!!&lt;a href='http://code.google.com/p/gitblit/issues/detail?id=$3'&gt;issue $3&lt;/a&gt;&quot;" />
 
-		</java>	
+		</java>
 	</target>
-		
+
 
 	<!--
-		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		Compile from source, publish binaries, and build & deploy site
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-->
-	<target name="buildAll" depends="buildGO,buildWAR,buildFederationClient,buildSite">		
+	<target name="buildAll" depends="buildGO,buildWAR,buildFederationClient,buildSite">
 		<!-- Cleanup -->
 		<delete dir="${project.build.dir}" />
 		<delete dir="${project.war.dir}" />
 		<delete dir="${project.deploy.dir}" />
 	</target>
-				
-	
-	<!-- 
+
+
+	<!--
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		Publish binaries to Google Code
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-->
 	<target name="publishBinaries" depends="buildGO,buildWAR,buildFederationClient" description="Publish the Gitblit binaries to Google Code">
-		
+
 		<echo>Uploading Gitblit ${gb.version} binaries</echo>
-		
+
 		<!-- Upload ZIP file -->
-		<gcupload 
-			 username="${googlecode.user}" 
-			 password="${googlecode.password}" 
-			 projectname="gitblit" 
-			 filename="${distribution.zipfile}" 
+		<gcupload
+			 username="${googlecode.user}"
+			 password="${googlecode.password}"
+			 projectname="gitblit"
+			 filename="${distribution.zipfile}"
 			 targetfilename="gitblit-${gb.version}.zip"
 			 summary="Gitblit GO v${gb.version} (standalone, integrated Gitblit server)"
 			 labels="Featured, Type-Package, OpSys-All" />
-			
+
 		<!-- Upload WAR file -->
-		<gcupload 
-		     username="${googlecode.user}" 
-		     password="${googlecode.password}" 
-		     projectname="gitblit" 
-		     filename="${distribution.warfile}" 
+		<gcupload
+		     username="${googlecode.user}"
+		     password="${googlecode.password}"
+		     projectname="gitblit"
+		     filename="${distribution.warfile}"
 		     targetfilename="gitblit-${gb.version}.war"
 		     summary="Gitblit WAR v${gb.version} (standard WAR webapp for servlet containers)"
 		     labels="Featured, Type-Package, OpSys-All" />
-		
+
 		<!-- Upload FedClient -->
-		<gcupload 
-			username="${googlecode.user}" 
-			password="${googlecode.password}" 
-			projectname="gitblit" 
-			filename="${fedclient.zipfile}" 
+		<gcupload
+			username="${googlecode.user}"
+			password="${googlecode.password}"
+			projectname="gitblit"
+			filename="${fedclient.zipfile}"
 			targetfilename="fedclient-${gb.version}.zip"
 			summary="Gitblit Federation Client v${gb.version} (command-line tool to clone data from federated Gitblit instances)"
 			labels="Featured, Type-Package, OpSys-All" />
 	</target>
 
-	
+
 	<!--
-		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		Publish site to hosting service
 		You must add ext/commons-net-1.4.0.jar to your ANT classpath.
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-->
 	<target name="publishSite" depends="buildSite" description="Publish the Gitblit site to a webserver (requires ext/commons-net-1.4.0.jar)" >
-		
+
 		<echo>Uploading Gitblit ${gb.version} website</echo>
-		
+
 		<ftp server="${ftp.server}"
 			userid="${ftp.user}"
 			password="${ftp.password}"
@@ -625,13 +672,13 @@
 		</ftp>
 	</target>
 
-	
+
 	<!--
-		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		Compile from source, publish binaries, and build & deploy site
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-->
-	<target name="publishAll" depends="publishBinaries,publishSite">		
+	<target name="publishAll" depends="publishBinaries,publishSite">
 		<!-- Cleanup -->
 		<delete dir="${project.build.dir}" />
 		<delete dir="${project.war.dir}" />
